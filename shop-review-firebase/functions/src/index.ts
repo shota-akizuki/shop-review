@@ -3,10 +3,16 @@ import { User } from "./types/user";
 import admin = require("firebase-admin");
 import { Shop } from "./types/shop";
 import { Review } from "./types/review";
+import algoliasearch from "algoliasearch";
+
+const ALOGOLIA_ID = functions.config().algolia.id;
+const ALOGOLIA_ADMIN_KEY = functions.config().algolia.key;
+
+const client = algoliasearch(ALOGOLIA_ID, ALOGOLIA_ADMIN_KEY);
+const index = client.initIndex("reviews");
 
 //firebaseのアプリを初期化
 admin.initializeApp();
-
 exports.onUpdateUser = functions
   .region("asia-northeast1")
   .firestore.document("users/{userId}")
@@ -36,7 +42,7 @@ exports.onWriteReview = functions
   .region("asia-northeast1")
   .firestore.document("shops/{shopId}/reviews/{reviewId}")
   .onWrite(async (change, context) => {
-    const { shopId } = context.params;
+    const { shopId, reviewId } = context.params;
     const review = change.after.data() as Review;
     const db = admin.firestore();
     try {
@@ -92,6 +98,10 @@ exports.onWriteReview = functions
         };
       }
       await shopRef.update(params);
+      index.saveObject({
+        objectID: reviewId,
+        ...review,
+      });
     } catch (err) {
       console.log(err);
     }
