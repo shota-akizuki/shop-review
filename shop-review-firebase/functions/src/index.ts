@@ -7,7 +7,6 @@ import algoliasearch from "algoliasearch";
 
 const ALOGOLIA_ID = functions.config().algolia.id;
 const ALOGOLIA_ADMIN_KEY = functions.config().algolia.key;
-
 const client = algoliasearch(ALOGOLIA_ID, ALOGOLIA_ADMIN_KEY);
 const index = client.initIndex("reviews");
 
@@ -59,11 +58,11 @@ exports.onWriteReview = functions
       } else if (review.score === 2) {
         score2 += 1;
       } else if (review.score === 3) {
-        score2 += 1;
+        score3 += 1;
       } else if (review.score === 4) {
-        score2 += 1;
+        score4 += 1;
       } else if (review.score === 5) {
-        score2 += 1;
+        score5 += 1;
       }
       let aveScore =
         (score1 + score2 * 2 + score3 * 3 + score4 + 4 + score5 * 5) /
@@ -78,22 +77,22 @@ exports.onWriteReview = functions
         };
       } else if (review.score === 2) {
         params = {
-          score1: admin.firestore.FieldValue.increment(2),
+          score2: admin.firestore.FieldValue.increment(2),
           score: aveScore,
         };
       } else if (review.score === 3) {
         params = {
-          score1: admin.firestore.FieldValue.increment(3),
+          score3: admin.firestore.FieldValue.increment(3),
           score: aveScore,
         };
       } else if (review.score === 4) {
         params = {
-          score1: admin.firestore.FieldValue.increment(4),
+          score4: admin.firestore.FieldValue.increment(4),
           score: aveScore,
         };
       } else if (review.score === 5) {
         params = {
-          score1: admin.firestore.FieldValue.increment(5),
+          score5: admin.firestore.FieldValue.increment(5),
           score: aveScore,
         };
       }
