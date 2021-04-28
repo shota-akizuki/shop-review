@@ -4,6 +4,7 @@ import admin = require("firebase-admin");
 import { Shop } from "./types/shop";
 import { Review } from "./types/review";
 import algoliasearch from "algoliasearch";
+import { Expo, ExpoPushMessage } from "expo-server-sdk";
 
 const ALOGOLIA_ID = functions.config().algolia.id;
 const ALOGOLIA_ADMIN_KEY = functions.config().algolia.key;
@@ -12,6 +13,7 @@ const index = client.initIndex("reviews");
 
 //firebaseのアプリを初期化
 admin.initializeApp();
+let expo = new Expo();
 exports.onUpdateUser = functions
   .region("asia-northeast1")
   .firestore.document("users/{userId}")
@@ -103,5 +105,44 @@ exports.onWriteReview = functions
       });
     } catch (err) {
       console.log(err);
+    }
+  });
+
+exports.scheduledPushNotification = functions
+  .region("asia-northeast1")
+  .pubsub.schedule("0 10 * * *")
+  .timeZone("Asia/Tokyo")
+  .onRun(async () => {
+    // userからpushTokenを抽出
+    const snapshot = await admin.firestore().collection("users").get();
+    const pushTokens = snapshot.docs
+      .map((doc) => (doc.data() as User).pushToken)
+      .filter((pushToken) => !!pushToken);
+
+    let messages: ExpoPushMessage[] = [];
+    for (let pushToken of pushTokens) {
+      if (!Expo.isExpoPushToken(pushToken)) {
+        console.error(`Push token ${pushToken} is not a valid Expo push token`);
+        continue;
+      }
+
+      messages.push({
+        to: pushToken,
+        sound: "default",
+        body: "週末に行ったレストランのレビューを書こう♪",
+        data: { withSome: "data" },
+      });
+    }
+
+    let chunks = expo.chunkPushNotifications(messages);
+    let tickets = [];
+
+    for (let chunk of chunks) {
+      try {
+        let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...ticketChunk);
+      } catch (error) {
+        console.error(error);
+      }
     }
   });
